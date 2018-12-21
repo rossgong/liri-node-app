@@ -11,10 +11,15 @@ var fs = require("fs");
 function outputResponse(response) {
 	console.log(response);
 
-	fs.appendFile("logfile", response, function (err) { if (err) console.log(err); });
+	fs.appendFile("logfile", response + "\n", function (err) { if (err) console.log(err); });
 }
 
 function bandsInTown(artist) {
+	if (artist == "") {
+		artist = "Youth Code";
+		outputResponse("Defaulting to " + artist + " as no artist was provided\n");
+	}
+
 	var apiURL = "https://rest.bandsintown.com/artists/" + artist + "/events?app_id=" + keys.bands.key;
 	var response = "";
 
@@ -33,7 +38,7 @@ function bandsInTown(artist) {
 			response += "-----------" + "\n";
 		});
 
-		outputResponse(response);
+		outputResponse(response.slice(0, -1));
 	}, function (err) {
 		console.log(err);
 	});
@@ -42,6 +47,11 @@ function bandsInTown(artist) {
 }
 
 function spotifySong(song) {
+	if (song === "") {
+		song = "The Sign Ace of Base";
+		outputResponse("Defaulting to " + song + " as no song was provided")
+	}
+
 	var spot = new Spotify(keys.spotify);
 	var response = "";
 
@@ -61,7 +71,7 @@ function spotifySong(song) {
 
 		response += "From " + track.album.name + "\n";
 
-		response += "Link: " + track.external_urls.spotif + "\n";
+		response += "Link: " + track.external_urls.spotify;
 
 		outputResponse(response);
 	}).catch(function (err) {
@@ -72,6 +82,11 @@ function spotifySong(song) {
 }
 
 function omdb(movie) {
+	if (movie === "") {
+		movie = "Mr. Nobody";
+		outputResponse("Defaulting to " + movie + " as no movie was given")
+	}
+
 	var apiURL = "http://www.omdbapi.com/?t=" + movie + "&y=&plot=short&apikey=" + keys.omdb.key;
 	var response = "";
 
@@ -91,18 +106,31 @@ function omdb(movie) {
 
 		response += movie.Plo + "\n";
 
-		response += "Language: " + movie.Language + "\n";
+		response += "Language: " + movie.Language;
 
 		outputResponse(response);
 	}, function (err) {
 		console.log(err);
 	});
+}
 
+function fileCommand() {
+	fs.readFile("random.txt", "utf8", function (err, data) {
+		if (err) {
+			console.log(err);
+		} else {
+			var command = data.split(",");
 
+			if (command[0] === "do-what-it-says") {
+				outputResponse("I ain't gonna fall for an infinite do-what-it-says loop. Nice Try");
+			}
+
+			runCommand(command[0], command[1].slice(1, -1));
+		}
+	});
 }
 
 function runCommand(command, argument) {
-
 	switch (command) {
 		case "concert-this":
 			bandsInTown(argument);
@@ -114,10 +142,10 @@ function runCommand(command, argument) {
 			omdb(argument);
 			break;
 		case "do-what-it-says":
-
+			fileCommand();
 			break;
 		default:
-			command + " is not supported";
+			outputResponse(command + " is not supported");
 			break;
 	}
 }
@@ -127,5 +155,8 @@ var argument = "";
 for (var i = 3; i < process.argv.length; i++) {
 	argument += " " + process.argv[i];
 }
+
+fs.appendFile("logfile", "[[" + process.argv[2] + " " + argument + "]]\n", function (err) { if (err) console.log(err); });
+
 
 runCommand(process.argv[2], argument.trim());
